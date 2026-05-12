@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Chasqui | Route Intelligence · Microservices Architecture</title>
+    <!-- Leaflet CSS + Google Mutant -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Modern & Geometric -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- AOS Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0A0A0A;
+            color: #FFFFFF;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, .logo, .nav-links a {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* Fondo de mapa con efecto depth */
+        .map-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            filter: brightness(0.3) saturate(1.3) contrast(1.1) blur(4px);
+            transform: scale(1.02);
+        }
+        
+        #map-bg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .gradient-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.88) 100%);
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Navbar cuadrada y elegante */
+        .navbar-ultra {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 60px;
+            background: #0D0D0D;
+            border-bottom: 2px solid #D27436;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: #D27436;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: #0A0A0A;
+            margin-right: 12px;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            letter-spacing: -1px;
+            color: #FFFFFF;
+        }
+
+        .logo span {
+            color: #D27436;
+        }
+
+        .nav-links-ultra {
+            display: flex;
+            gap: 48px;
+        }
+        .nav-links-ultra a {
+            color: #E0E0E0;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            transition: 0.3s;
+            padding: 8px 0;
+        }
+        .nav-links-ultra a:hover {
+            color: #D27436;
+        }
+
+        /* Hero Moderno - con imagen de fondo y colores negro + #D27436 */
+        .hero-modern {
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            padding: 0 60px;
+            position: relative;
+            background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
+        }
+        
+        .hero-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 50px;
+            position: relative;
+            z-index: 2;
+        }
+        .hero-left {
+            flex: 1.2;
+            min-width: 300px;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(210, 116, 54, 0.15);
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 28px;
+            border-left: 3px solid #D27436;
+            color: #D27436;
+        }
+        .hero-left h1 {
+            font-size: 4.5rem;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: #FFFFFF;
+        }
+        .hero-left h1 span {
+            color: #D27436;
+            display: inline-block;
+            animation: glowText 2s ease-in-out infinite;
+        }
+        @keyframes glowText {
+            0%, 100% { text-shadow: 0 0 0px #D27436; }
+            50% { text-shadow: 0 0 12px #D27436; }
+        }
+        .hero-desc {
+            font-size: 1.05rem;
+            opacity: 0.8;
+            margin-bottom: 40px;
+            max-width: 500px;
+            color: #CCCCCC;
+            line-height: 1.6;
+        }
+        .hero-stats-modern {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 45px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            background: #141414;
+            padding: 16px 24px;
+            border-radius: 16px;
+            border: 1px solid #2A2A2A;
+            transition: 0.3s;
+            min-width: 110px;
+        }
+        .stat-item:hover {
+            border-color: #D27436;
+            transform: translateY(-4px);
+        }
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #D27436;
+        }
+        .stat-item div:last-child {
+            color: #AAAAAA;
+            font-size: 0.8rem;
+        }
+        .btn-primary {
+            background: #D27436;
+            color: #FFFFFF;
+            border: none;
+            padding: 16px 42px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: inline-flex;
+            gap: 12px;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+        .btn-primary:hover {
+            background: #E0864A;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(210, 116, 54, 0.3);
+        }
+        .hero-right {
+            flex: 1;
+            min-width: 320px;
+            background: #111111;
+            border-radius: 24px;
+            padding: 35px;
+            border: 1px solid #2A2A2A;
+            text-align: center;
+        }
+        .neural-viz {
+            background: #0D0D0D;
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid #2A2A2A;
+        }
+        .neural-viz i {
+            font-size: 4.5rem;
+            color: #D27436;
+        }
+        .user-counter-modern {
+            margin-top: 25px;
+            padding: 20px;
+            background: #0D0D0D;
+            border-radius: 20px;
+            border: 1px solid #2A2A2A;
+        }
+        .counter-value {
+            font-size: 2.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #D27436;
+        }
+
+        /* Sección de métricas cuadradas */
+        .metrics-showcase {
+            padding: 80px 60px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            background: #0A0A0A;
+        }
+        .metric-card {
+            background: #111111;
+            border-radius: 20px;
+            padding: 32px 28px;
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            border: 1px solid #2A2A2A;
+            transition: 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-6px);
+            border-color: #D27436;
+        }
+        .metric-card i {
+            color: #D27436;
+        }
+
+        /* Cards de servicio cuadradas */
+        .services-modern {
+            padding: 80px 60px;
+            background: #0A0A0A;
+            border-top: 1px solid #1A1A1A;
+            border-bottom: 1px solid #1A1A1A;
+        }
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: #FFFFFF;
+        }
+        .section-title h2 span {
+            color: #D27436;
+        }
+        .grid-cards-modern {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .service-card-modern {
+            background: #111111;
+            border-radius: 20px;
+            padding: 40px 28px;
+            border: 1px solid #2A2A2A;
+            transition: all 0.4s ease;
+            text-align: center;
+        }
+        .service-card-modern:hover {
+            transform: translateY(-10px);
+            border-color: #D27436;
+            background: #161616;
+        }
+        .service-icon {
+            font-size: 3rem;
+            margin-bottom: 24px;
+            color: #D27436;
+        }
+
+        /* Mapa dinámico panel cuadrado */
+        .dashboard-premium {
+            margin: 60px 60px 90px;
+            background: #111111;
+            border-radius: 24px;
+            border: 1px solid #2A2A2A;
+            overflow: hidden;
+        }
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: #0D0D0D;
+            border-bottom: 1px solid #2A2A2A;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .live-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #D27436;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #D27436;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .map-modern {
+            height: 380px;
+            width: 100%;
+        }
+        .dash-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: #0D0D0D;
+            border-top: 1px solid #2A2A2A;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #D27436;
+            border-radius: 12px;
+            padding: 10px 28px;
+            color: #D27436;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 600;
+        }
+        .btn-outline:hover {
+            background: #D27436;
+            color: #0A0A0A;
+        }
+
+        .footer-modern {
+            text-align: center;
+            padding: 50px;
+            background: #0A0A0A;
+            border-top: 1px solid #1A1A1A;
+        }
+        .footer-modern i {
+            color: #D27436;
+        }
+
+        @media (max-width: 950px) {
+            .navbar-ultra { padding: 16px 25px; flex-direction: column; gap: 15px; }
+            .hero-modern { padding: 40px 25px; }
+            .hero-left h1 { font-size: 2.8rem; }
+            .services-modern { padding: 50px 25px; }
+            .dashboard-premium { margin: 30px 20px; }
+            .metrics-showcase { padding: 50px 25px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="map-backdrop">
+    <div id="map-bg"></div>
+</div>
+<div class="gradient-overlay"></div>
+
+<div class="content">
+    <div class="navbar-ultra">
+        <div style="display: flex; align-items: center;">
+            <div class="logo"><h1>CHAS<span>QUI</span></h1></div>
+        </div>
+        <div class="nav-links-ultra">
+            <a href="#">HOME</a>
+            <a href="#services">SERVICES</a>
+            <a href="#liveMapSection">LIVE MAP</a>
+            <a href="#">CONTACT</a>
+        </div>
+    </div>
+
+    <!-- Hero Moderno con colores negro + #D27436 -->
+    <div class="hero-modern">
+        <div class="hero-grid">
+            <div class="hero-left" data-aos="fade-right">
+                <h1>Rutas que<br><span>anticipan</span> el futuro</h1>
+                <div class="hero-desc">Optimización de flotas en tiempo real con OR-Tools, escalabilidad horizontal y latencia ultrabaja.</div>
+                <div class="hero-stats-modern">
+                    <div class="stat-item">
+                        <div class="stat-number" id="statEfficiency">96</div>
+                        <div>% Eficiencia</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="statCost">-34</div>
+                        <div>% Costos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="statLatency">280</div>
+                        <div>ms respuesta</div>
+                    </div>
+                </div>
+                <button class="btn-primary" id="demoTrigger" onclick="window.location.href='prototipo.html'"><i class="fas fa-play-circle"></i> EXPLORAR DEMO</button>
+            </div>
+            <div class="hero-right" data-aos="fade-left">
+                <div class="neural-viz">
+                    <i class="fas fa-charging-station"></i>
+                    <div style="margin-top: 20px; font-size: 1.8rem; font-weight:800; color: #D27436;" id="radialOptimValue">84%</div>
+                    <div style="color: #888;">optimización neural</div>
+                </div>
+                <div class="user-counter-modern">
+                    <i class="fas fa-globe" style="color: #D27436;"></i> <span style="color: #CCCCCC;">USUARIOS ACTIVOS</span>
+                    <div class="counter-value" id="activeUsersCounter">1,247</div>
+                    <div style="font-size: 0.7rem; color: #777;">conexiones en tiempo real</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de métricas de impacto -->
+    <div class="metrics-showcase" data-aos="zoom-in">
+        <div class="metric-card"><i class="fas fa-cloud-upload-alt" style="font-size: 2rem;"></i><h3 style="margin: 15px 0; color:#D27436;">+47%</h3><p style="color:#AAA;">más entregas por día</p></div>
+        <div class="metric-card"><i class="fas fa-chart-line" style="font-size: 2rem;"></i><h3 style="margin: 15px 0; color:#D27436;">-32%</h3><p style="color:#AAA;">reducción de millas</p></div>
+        <div class="metric-card"><i class="fas fa-tachometer-alt" style="font-size: 2rem;"></i><h3 style="margin: 15px 0; color:#D27436;">99.97%</h3><p style="color:#AAA;">disponibilidad</p></div>
+        <div class="metric-card"><i class="fas fa-users" style="font-size: 2rem;"></i><h3 style="margin: 15px 0; color:#D27436;">+2.8k</h3><p style="color:#AAA;">clientes activos</p></div>
+    </div>
+
+    <!-- Servicios premium -->
+    <div class="services-modern" id="services">
+        <div class="section-title">
+            <h2>Microservicios <span>|</span> Escala sin límites</h2>
+        </div>
+        <div class="grid-cards-modern">
+            <div class="service-card-modern" onclick="alert('⚡ Escalabilidad horizontal con Kubernetes y auto-healing')">
+                <div class="service-icon"><i class="fas fa-expand-alt"></i></div>
+                <h3 style="margin-bottom: 12px;">Escalado Elástico</h3>
+                <p style="color:#AAA;">Cada microservicio escala independientemente en milisegundos.</p>
+            </div>
+            <div class="service-card-modern" onclick="alert('🧠 OR-Tools + Algoritmos genéticos para VRP dinámico')">
+                <div class="service-icon"><i class="fas fa-brain"></i></div>
+                <h3 style="margin-bottom: 12px;">OR-Tools VRP</h3>
+                <p style="color:#AAA;">Optimización con restricciones complejas y ventanas horarias.</p>
+            </div>
+            <div class="service-card-modern" onclick="alert('📡 WebSockets + tracking satelital en tiempo real')">
+                <div class="service-icon"><i class="fas fa-satellite-dish"></i></div>
+                <h3 style="margin-bottom: 12px;">LiveSync</h3>
+                <p style="color:#AAA;">Actualización de flota con ETAs predictivos.</p>
+            </div>
+            <div class="service-card-modern" onclick="alert('🛡️ Service Mesh con zero-trust security')">
+                <div class="service-icon"><i class="fas fa-shield-haltered"></i></div>
+                <h3 style="margin-bottom: 12px;">Seguridad Zero-Trust</h3>
+                <p style="color:#AAA;">Arquitectura inmutable y cifrado end-to-end.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de mapa interactivo -->
+    <div class="dashboard-premium" id="liveMapSection">
+        <div class="dash-header">
+            <div><span class="live-dot"></span> DATASTREAM ACTIVO</div>
+            <div><i class="fas fa-truck-fast"></i> Flota desplegada: <strong id="fleetCount" style="color:#D27436;">14</strong> unidades</div>
+        </div>
+        <div class="map-modern" id="liveMapContainer"></div>
+        <div class="dash-footer">
+            <div><i class="fas fa-clock"></i> ETA promedio: <span id="etaLive" style="color:#D27436;">9.8 min</span></div>
+            <div><i class="fas fa-chart-simple"></i> Índice de optimización: <span id="optimLiveSpan" style="color:#D27436;">84</span>%</div>
+            <button id="refreshMapData" class="btn-outline"><i class="fas fa-sync-alt"></i> ACTUALIZAR MÉTRICAS</button>
+        </div>
+    </div>
+
+    <div class="footer-modern">
+        <i class="fa-regular fa-copyright"></i> 2025 CHASQUI · Cognitive Routing · Microservices Mesh
+        <div style="margin-top: 20px;">
+            <i class="fab fa-github"></i> <i class="fab fa-linkedin-in"></i> <i class="fab fa-x-twitter"></i> <i class="fab fa-instagram"></i>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.13.4/dist/Leaflet.GoogleMutant.js"></script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    AOS.init({ duration: 800, once: true, offset: 60 });
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Mapa de fondo
+    const bgMap = L.map('map-bg').setView([-12.0464, -77.0428], 11);
+    L.gridLayer.googleMutant({
+        type: 'roadmap',
+        maxZoom: 20,
+        styles: [{ featureType: "landscape", stylers: [{ color: "#1a1a1a" }] }, { featureType: "water", stylers: [{ color: "#0a0a1a" }] }]
+    }).addTo(bgMap);
+    const routeDemo = [[-12.0464, -77.0428], [-12.0639, -77.0375], [-12.0391, -77.0283]];
+    L.polyline(routeDemo, { color: '#D27436', weight: 3, opacity: 0.6 }).addTo(bgMap);
+
+    // Mapa interactivo principal (live)
+    const liveMap = L.map('liveMapContainer').setView([-12.0464, -77.0428], 12);
+    L.gridLayer.googleMutant({ type: 'roadmap' }).addTo(liveMap);
+    const points = [[-12.0464, -77.0428], [-12.0639, -77.0375], [-12.0391, -77.0283], [-12.0183, -77.0715]];
+    L.polyline(points, { color: '#D27436', weight: 4, opacity: 0.9, dashArray: '8, 8' }).addTo(liveMap);
+    
+    let stepIndex = 0;
+    const movingIcon = L.divIcon({ html: `<div style="background:#D27436; width:22px; height:22px; border-radius:6px; border:2px solid #FFFFFF; box-shadow:0 0 12px #D27436;"></div>`, iconSize: [22,22] });
+    let vehicleMarker = L.marker(points[0], { icon: movingIcon }).addTo(liveMap);
+    setInterval(() => { stepIndex = (stepIndex + 1) % points.length; vehicleMarker.setLatLng(points[stepIndex]); }, 3200);
+    liveMap.fitBounds(L.latLngBounds(points));
+
+    // Variables para animaciones y datos
+    let currentEfficiency = 84;
+    const efficiencySpan = document.getElementById('statEfficiency');
+    const costSpan = document.getElementById('statCost');
+    const latencySpan = document.getElementById('statLatency');
+    const radialSpan = document.getElementById('radialOptimValue');
+    const fleetSpan = document.getElementById('fleetCount');
+    const etaSpan = document.getElementById('etaLive');
+    const optimLiveSpan = document.getElementById('optimLiveSpan');
+    const activeUsersSpan = document.getElementById('activeUsersCounter');
+
+    function updateUI(value) {
+        if(efficiencySpan) efficiencySpan.innerText = value;
+        if(radialSpan) radialSpan.innerText = value + '%';
+        if(optimLiveSpan) optimLiveSpan.innerText = value;
+    }
+
+    // Contador de usuarios activos en tiempo real
+    let activeUsers = 1247;
+    function updateActiveUsers() {
+        let delta = Math.floor(Math.random() * 21) - 7;
+        let newVal = activeUsers + delta;
+        if(newVal < 800) newVal = 800;
+        if(newVal > 3800) newVal = 3800;
+        activeUsers = newVal;
+        if(activeUsersSpan) activeUsersSpan.innerText = activeUsers.toLocaleString();
+        setTimeout(updateActiveUsers, 5800);
+    }
+    updateActiveUsers();
+
+    // Refrescar datos del mapa y estadísticas
+    document.getElementById('refreshMapData')?.addEventListener('click', () => {
+        let newFleet = Math.floor(Math.random() * 16) + 9;
+        let newEta = (Math.random() * 7 + 8).toFixed(1);
+        let newOptim = Math.floor(Math.random() * 12) + 82;
+        if(newOptim > 98) newOptim = 98;
+        currentEfficiency = newOptim;
+        updateUI(currentEfficiency);
+        if(fleetSpan) fleetSpan.innerText = newFleet;
+        if(etaSpan) etaSpan.innerText = newEta + " min";
+        if(costSpan) costSpan.innerText = '-' + (Math.floor(Math.random() * 14) + 28);
+        if(latencySpan) latencySpan.innerText = Math.floor(Math.random() * 70) + 210;
+        gsap.to('.dash-footer', { scale: 1.02, duration: 0.2, yoyo: true, repeat: 1 });
+    });
+
+    // Demo interactiva
+    document.getElementById('demoTrigger')?.addEventListener('click', () => {
+        alert("✨ CHASQUI DEMO: Microservicios activos, optimización de 42 rutas en 0.21 segundos.");
+        let temp = currentEfficiency;
+        let interval = setInterval(() => {
+            if(temp >= 97) clearInterval(interval);
+            else { temp += 2; updateUI(temp); currentEfficiency = temp; }
+        }, 70);
+    });
+
+    // Efecto parallax en el mapa de fondo
+    window.addEventListener('scroll', () => {
+        let scrollY = window.scrollY;
+        gsap.to('.map-backdrop', { y: scrollY * 0.15, duration: 0.2, ease: "none" });
+    });
+</script>
+</body>
+</html>

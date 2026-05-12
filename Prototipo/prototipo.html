@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Microservicios | Optimización de Rutas en Tiempo Real - Perú</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS y JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0D0D0D;
+            min-height: 100vh;
+            padding: 24px 20px;
+            color: #e0e0e0;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 32px;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 16px 28px;
+            border-radius: 48px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            border: 1px solid rgba(210, 116, 54, 0.3);
+        }
+
+        .title-section h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #D27436);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .title-section p {
+            font-size: 0.85rem;
+            color: #D27436;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .micro-badge {
+            display: flex;
+            gap: 12px;
+            background: rgba(210, 116, 54, 0.15);
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #D27436;
+        }
+
+        .grid-main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .map-card {
+            background: #1a1a1a;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 24px;
+            background: #121212;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+        }
+
+        .route-status {
+            background: #2a1f18;
+            border-radius: 100px;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #D27436;
+        }
+
+        .map-container {
+            background: #1e1e1e;
+            position: relative;
+            min-height: 460px;
+            width: 100%;
+        }
+        
+        #leafletMap {
+            width: 100%;
+            height: 460px;
+            background-color: #2c2c2c;
+        }
+
+        .route-info {
+            padding: 16px 24px 20px;
+            background: #121212;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .metrics {
+            display: flex;
+            gap: 20px;
+        }
+
+        .metric {
+            background: #0D0D0D;
+            border-radius: 24px;
+            padding: 8px 16px;
+            text-align: center;
+            border: 1px solid #2a2a2a;
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #D27436;
+        }
+
+        .metric-value {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #ffffff;
+        }
+
+        .services-panel {
+            background: #121212;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.4);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .services-title {
+            font-weight: 600;
+            border-left: 4px solid #D27436;
+            padding-left: 14px;
+            color: #ffffff;
+        }
+
+        .city-selector {
+            background: #0D0D0D;
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid #2a2a2a;
+            margin-bottom: 8px;
+        }
+
+        .city-selector label {
+            display: block;
+            font-size: 0.75rem;
+            color: #D27436;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .city-selector select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #1a1a1a;
+            border: 1px solid #D27436;
+            border-radius: 40px;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .city-selector select:hover {
+            border-color: #e08647;
+        }
+
+        .city-selector select:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(210, 116, 54, 0.3);
+        }
+
+        .city-selector option {
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .city-info {
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: #a0a0a0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .city-info i {
+            color: #D27436;
+        }
+
+        .service-card {
+            background: #0D0D0D;
+            border-radius: 24px;
+            padding: 14px 16px;
+            border: 1px solid #2a2a2a;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .service-icon {
+            width: 44px;
+            height: 44px;
+            background: #1e1a16;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: #D27436;
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+
+        .service-desc {
+            font-size: 0.7rem;
+            color: #a0a0a0;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 30px;
+            background: #1f1f1f;
+            color: #D27436;
+        }
+
+        .status-badge.active {
+            background: #2a1f18;
+            color: #D27436;
+            border-left: 2px solid #D27436;
+        }
+
+        .simulate-bar {
+            margin-top: 16px;
+            background: #121212;
+            border-radius: 32px;
+            padding: 18px 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #2a2a2a;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .btn-primary {
+            background: #D27436;
+            color: #0D0D0D;
+            box-shadow: 0 4px 8px rgba(210, 116, 54, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #e08647;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #3a3a3a;
+        }
+
+        .alert-msg {
+            font-size: 0.8rem;
+            background: #1e1a16;
+            padding: 6px 14px;
+            border-radius: 60px;
+            color: #D27436;
+        }
+
+        footer {
+            margin-top: 36px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #7a7a7a;
+        }
+
+        @media (max-width: 860px) {
+            .grid-main {
+                grid-template-columns: 1fr;
+            }
+            .simulate-bar {
+                flex-direction: column;
+                gap: 16px;
+                align-items: stretch;
+            }
+        }
+
+        .custom-marker {
+            background: #D27436;
+            color: #0D0D0D;
+            font-weight: bold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border: 2px solid #ffffff;
+            width: 25px !important;
+            height: 25px !important;
+        }
+        .depot-marker {
+            background: #2c5f8a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            border: 2px solid #D27436;
+            width: 30px !important;
+            height: 30px !important;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <div class="title-section">
+            <h1><i class="fas fa-route" style="color:#D27436;"></i> CHAS<span style="font-weight:300">QUI</span> </h1>
+            <p><i class="fas fa-microchip"></i> Arquitectura de microservicios · Optimización dinámica de rutas · Ciudades del Perú</p>
+        </div>
+        <div class="micro-badge">
+            <i class="fas fa-cogs"></i> <span>Gateway / Routing / Optimizer / Tracker</span>
+            <i class="fas fa-sync-alt"></i> Event-driven
+        </div>
+    </div>
+
+    <div class="grid-main">
+        <div class="map-card">
+            <div class="card-header">
+                <h3><i class="fas fa-map-marked-alt"></i> Mapa de entregas · optimización activa</h3>
+                <div class="route-status" id="liveStatusMsg"><i class="fas fa-charging-station"></i> Microservicios activos</div>
+            </div>
+            <div class="map-container">
+                <div id="leafletMap"></div>
+            </div>
+            <div class="route-info">
+                <div class="metrics">
+                    <div class="metric"><div class="metric-label">Distancia total</div><div class="metric-value" id="totalDistance">0</div><span style="font-size:10px"> km</span></div>
+                    <div class="metric"><div class="metric-label">Tiempo estimado</div><div class="metric-value" id="totalTime">0</div><span style="font-size:10px"> min</span></div>
+                    <div class="metric"><div class="metric-label">Nodos óptimos</div><div class="metric-value" id="waypointsCount">0</div></div>
+                </div>
+                <div><i class="fas fa-truck-fast"></i> <span id="routeDesc">Haz click en el mapa para agregar destinos</span></div>
+            </div>
+        </div>
+
+        <div class="services-panel">
+            <div class="services-title"><i class="fas fa-microservices"></i> Arquitectura en tiempo real</div>
+            
+            <!-- Selector de ciudades del Perú -->
+            <div class="city-selector">
+                <label><i class="fas fa-city"></i> Seleccionar ciudad del Perú</label>
+                <select id="citySelect">
+                    <option value="-12.046374,-77.042793,12">🇵🇪 Lima</option>
+                    <option value="-13.531950,-71.967463,13">🇵🇪 Cusco</option>
+                    <option value="-12.068100,-75.209440,12">🇵🇪 Huancayo</option>
+                    <option value="-15.840222,-70.021880,12">🇵🇪 Puno</option>
+                    <option value="-16.398822,-71.536883,13">🇵🇪 Arequipa</option>
+                    <option value="-8.115199,-79.029793,12">🇵🇪 Trujillo</option>
+                    <option value="-12.065830,-77.149420,12">🇵🇪 Callao</option>
+                    <option value="-5.202470,-80.625830,12">🇵🇪 Piura</option>
+                    <option value="-6.770500,-79.841370,12">🇵🇪 Chiclayo</option>
+                    <option value="-3.749120,-73.253830,12">🇵🇪 Iquitos</option>
+                    <option value="-9.189967,-75.015152,12">🇵🇪 Tingo María</option>
+                    <option value="-13.163140,-74.224550,12">🇵🇪 Ayacucho</option>
+                    <option value="-7.159240,-78.513510,12">🇵🇪 Cajamarca</option>
+                    <option value="-11.851667,-75.360000,12">🇵🇪 La Oroya</option>
+                    <option value="-9.533333,-77.533333,12">🇵🇪 Huaraz</option>
+                    <option value="-17.966667,-70.250000,12">🇵🇪 Tacna</option>
+                    <option value="-14.066667,-75.733333,12">🇵🇪 Ica</option>
+                    <option value="-6.433333,-76.783333,12">🇵🇪 Moyobamba</option>
+                    <option value="-8.383333,-74.550000,12">🇵🇪 Pucallpa</option>
+                    <option value="-11.983333,-76.266667,12">🇵🇪 Matucana</option>
+                </select>
+                <div class="city-info" id="cityInfo">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Ciudad actual: Lima</span>
+                </div>
+            </div>
+
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="service-info">
+                    <div class="service-name">API Gateway · Enrutador</div>
+                    <div class="service-desc">Balanceo y validación de peticiones</div>
+                </div>
+                <div class="status-badge active" id="gatewayStatus">200 OK</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-brain"></i></div>
+                <div class="service-info">
+                    <div class="service-name">Optimizador de Rutas</div>
+                    <div class="service-desc">Algoritmo TSP dinámico</div>
+                </div>
+                <div class="status-badge active" id="optimizerStatus">activo</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-map-pin"></i></div>
+                <div class="service-info">
+                    <div class="service-name">Tracker Tiempo Real</div>
+                    <div class="service-desc">Eventos de tráfico & actualización</div>
+                </div>
+                <div class="status-badge active" id="trackerStatus">escuchando</div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="service-info">
+                    <div class="service-name">Routing · Nearest Neighbor</div>
+                    <div class="service-desc">Heurística optimizada</div>
+                </div>
+                <div class="status-badge active" id="routingStatus">cálculo instantáneo</div>
+            </div>
+            <div class="alert-msg" id="simulateAlert">
+                <i class="fas fa-lightbulb"></i> Click en mapa → agrega puntos. El optimizador reorganiza la ruta.
+            </div>
+        </div>
+    </div>
+
+    <div class="simulate-bar">
+        <div><i class="fas fa-traffic-light"></i> <strong>Simular microservicios:</strong> actualización en tiempo real</div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="randomPointsBtn"><i class="fas fa-random"></i> Destinos aleatorios</button>
+            <button class="btn btn-primary" id="optimizeNowBtn"><i class="fas fa-route"></i> Reoptimizar ruta</button>
+            <button class="btn btn-secondary" id="resetPointsBtn"><i class="fas fa-trash-alt"></i> Limpiar puntos</button>
+        </div>
+    </div>
+    <footer>
+        ⚡ Prototipo conceptual con OpenStreetMap · Selecciona una ciudad del Perú para cambiar la ubicación · Colores #0D0D0D y #D27436
+    </footer>
+</div>
+
+<script>
+    let map;
+    let markers = [];
+    let waypoints = [];
+    let currentPolyline = null;
+    let currentDepot = { lat: -12.046374, lng: -77.042793 };
+    let currentCityName = "Lima";
+    
+    const cityNames = {
+        "-12.046374,-77.042793,12": "Lima",
+        "-13.531950,-71.967463,13": "Cusco",
+        "-12.068100,-75.209440,12": "Huancayo",
+        "-15.840222,-70.021880,12": "Puno",
+        "-16.398822,-71.536883,13": "Arequipa",
+        "-8.115199,-79.029793,12": "Trujillo",
+        "-12.065830,-77.149420,12": "Callao",
+        "-5.202470,-80.625830,12": "Piura",
+        "-6.770500,-79.841370,12": "Chiclayo",
+        "-3.749120,-73.253830,12": "Iquitos",
+        "-9.189967,-75.015152,12": "Tingo María",
+        "-13.163140,-74.224550,12": "Ayacucho",
+        "-7.159240,-78.513510,12": "Cajamarca",
+        "-11.851667,-75.360000,12": "La Oroya",
+        "-9.533333,-77.533333,12": "Huaraz",
+        "-17.966667,-70.250000,12": "Tacna",
+        "-14.066667,-75.733333,12": "Ica",
+        "-6.433333,-76.783333,12": "Moyobamba",
+        "-8.383333,-74.550000,12": "Pucallpa",
+        "-11.983333,-76.266667,12": "Matucana"
+    };
+    
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    function computeOptimalRoute(points) {
+        if (!points.length) return { orderedPoints: [], totalDist: 0, totalTime: 0 };
+        let unvisited = [...points];
+        let route = [currentDepot];
+        let current = currentDepot;
+        while (unvisited.length > 0) {
+            let bestIdx = 0;
+            let bestDist = haversineDistance(current.lat, current.lng, unvisited[0].lat, unvisited[0].lng);
+            for (let i = 1; i < unvisited.length; i++) {
+                let d = haversineDistance(current.lat, current.lng, unvisited[i].lat, unvisited[i].lng);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestIdx = i;
+                }
+            }
+            route.push(unvisited[bestIdx]);
+            current = unvisited[bestIdx];
+            unvisited.splice(bestIdx, 1);
+        }
+        route.push(currentDepot);
+        let totalDist = 0;
+        for (let i = 0; i < route.length - 1; i++) {
+            totalDist += haversineDistance(route[i].lat, route[i].lng, route[i+1].lat, route[i+1].lng);
+        }
+        return { orderedPoints: route, totalDist: totalDist.toFixed(1), totalTime: Math.round(totalDist * 2.3) };
+    }
+    
+    function refreshMap() {
+        const opt = computeOptimalRoute(waypoints);
+        document.getElementById('totalDistance').innerText = opt.totalDist;
+        document.getElementById('totalTime').innerText = opt.totalTime;
+        document.getElementById('waypointsCount').innerText = waypoints.length;
+        
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        
+        waypoints.forEach((wp, i) => {
+            const marker = L.marker([wp.lat, wp.lng], {
+                icon: L.divIcon({ 
+                    html: `${i+1}`, 
+                    className: 'custom-marker',
+                    iconSize: [25, 25],
+                    popupAnchor: [0, -10]
+                })
+            }).bindTooltip(`Pedido ${i+1}`, { permanent: false, direction: 'top' }).addTo(map);
+            markers.push(marker);
+        });
+        
+        const depotMarker = L.marker([currentDepot.lat, currentDepot.lng], {
+            icon: L.divIcon({ 
+                html: '🏭', 
+                className: 'depot-marker',
+                iconSize: [30, 30]
+            })
+        }).bindTooltip(`Centro de distribución - ${currentCityName}`, { permanent: false, direction: 'top' }).addTo(map);
+        markers.push(depotMarker);
+        
+        if (currentPolyline) map.removeLayer(currentPolyline);
+        if (opt.orderedPoints.length > 1) {
+            const latlngs = opt.orderedPoints.map(p => [p.lat, p.lng]);
+            currentPolyline = L.polyline(latlngs, { 
+                color: '#D27436', 
+                weight: 4, 
+                opacity: 0.9,
+                dashArray: '8, 6'
+            }).addTo(map);
+        }
+        
+        simulateMicroservices();
+        
+        if (waypoints.length === 0) {
+            document.getElementById('routeDesc').innerHTML = '📍 Sin destinos. Haz clic en el mapa para agregar puntos de entrega.';
+        } else {
+            document.getElementById('routeDesc').innerHTML = `🔄 Ruta optimizada con ${waypoints.length} puntos · microservicio "Optimizer" aplicó Nearest Neighbor.`;
+        }
+    }
+    
+    function simulateMicroservices() {
+        const gateway = document.getElementById('gatewayStatus');
+        const optimizer = document.getElementById('optimizerStatus');
+        const tracker = document.getElementById('trackerStatus');
+        const routing = document.getElementById('routingStatus');
+        
+        gateway.innerText = "enrutando...";
+        optimizer.innerText = "calculando...";
+        tracker.innerText = "actualizando...";
+        routing.innerText = "procesando...";
+        
+        setTimeout(() => {
+            gateway.innerText = "200 OK";
+            optimizer.innerText = "activo";
+            tracker.innerText = "escuchando";
+            routing.innerText = "cálculo instantáneo";
+            const liveMsg = document.getElementById('liveStatusMsg');
+            liveMsg.innerHTML = '<i class="fas fa-check-circle"></i> Optimización completada ✅';
+            setTimeout(() => {
+                liveMsg.innerHTML = '<i class="fas fa-charging-station"></i> Microservicios activos';
+            }, 1800);
+        }, 400);
+    }
+    
+    function changeCity(lat, lng, zoom, cityName) {
+        currentDepot = { lat: lat, lng: lng };
+        currentCityName = cityName;
+        
+        waypoints = [];
+        
+        document.getElementById('cityInfo').innerHTML = `<i class="fas fa-map-marker-alt"></i> <span>Ciudad actual: ${cityName}</span>`;
+        
+        map.setView([lat, lng], zoom);
+        
+        refreshMap();
+        
+        const alertDiv = document.getElementById('simulateAlert');
+        alertDiv.innerHTML = `<i class="fas fa-globe-americas"></i> Cambiado a ${cityName}, Perú. Centro logístico actualizado.`;
+        setTimeout(() => {
+            alertDiv.innerHTML = '<i class="fas fa-lightbulb"></i> Click en mapa → agrega puntos. El optimizador reorganiza la ruta.';
+        }, 3000);
+    }
+    
+    function initMap() {
+        map = L.map('leafletMap').setView([currentDepot.lat, currentDepot.lng], 12);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            minZoom: 6
+        }).addTo(map);
+        
+        map.on('click', (e) => {
+            waypoints.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+            refreshMap();
+            
+            const gatewaySpan = document.getElementById('gatewayStatus');
+            gatewaySpan.innerText = "POST /optimize";
+            setTimeout(() => {
+                if(gatewaySpan.innerText === "POST /optimize") gatewaySpan.innerText = "200 OK";
+            }, 500);
+        });
+        
+        // Puntos de ejemplo para Lima
+        waypoints = [
+            { lat: -12.056, lng: -77.062 },
+            { lat: -12.036, lng: -77.022 },
+            { lat: -12.066, lng: -77.052 }
+        ];
+        refreshMap();
+    }
+    
+    function randomPoints() {
+        const center = currentDepot;
+        const num = Math.floor(Math.random() * 5) + 2;
+        waypoints = [];
+        for (let i = 0; i < num; i++) {
+            // Radio de aproximadamente 5-10km alrededor de la ciudad
+            const latOffset = (Math.random() - 0.5) * 0.1;
+            const lngOffset = (Math.random() - 0.5) * 0.1;
+            waypoints.push({
+                lat: center.lat + latOffset,
+                lng: center.lng + lngOffset
+            });
+        }
+        refreshMap();
+        
+        const msg = document.getElementById('simulateAlert');
+        msg.innerHTML = `<i class="fas fa-microphone-alt"></i> Gateway recibió ${num} nuevos destinos en ${currentCityName} · Optimizador ejecutado.`;
+        setTimeout(() => {
+            if(msg.innerHTML.includes("Gateway")) msg.innerHTML = '<i class="fas fa-lightbulb"></i> Click en mapa → agrega puntos. El optimizador reorganiza la ruta.';
+        }, 3000);
+    }
+    
+    function resetPoints() {
+        waypoints = [];
+        refreshMap();
+        document.getElementById('simulateAlert').innerHTML = '<i class="fas fa-eraser"></i> Todos los destinos eliminados. Microservicio Tracker limpio.';
+        setTimeout(() => {
+            document.getElementById('simulateAlert').innerHTML = '<i class="fas fa-lightbulb"></i> Click en mapa → agrega puntos. El optimizador reorganiza la ruta.';
+        }, 2200);
+    }
+    
+    function forceOptimize() {
+        if(waypoints.length === 0) {
+            const alertDiv = document.getElementById('simulateAlert');
+            alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No hay destinos. Agrega puntos en el mapa primero.';
+            setTimeout(() => {
+                alertDiv.innerHTML = '<i class="fas fa-lightbulb"></i> Click en mapa → agrega puntos. El optimizador reorganiza la ruta.';
+            }, 2000);
+            return;
+        }
+        refreshMap();
+        const optDiv = document.getElementById('optimizerStatus');
+        optDiv.innerText = "recalculando TSP...";
+        setTimeout(() => { optDiv.innerText = "activo"; }, 600);
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        
+        const citySelect = document.getElementById('citySelect');
+        citySelect.addEventListener('change', (e) => {
+            const value = e.target.value;
+            const [lat, lng, zoom] = value.split(',').map(Number);
+            const cityName = cityNames[value] || "Ciudad seleccionada";
+            changeCity(lat, lng, zoom, cityName);
+        });
+        
+        document.getElementById('randomPointsBtn').addEventListener('click', randomPoints);
+        document.getElementById('optimizeNowBtn').addEventListener('click', forceOptimize);
+        document.getElementById('resetPointsBtn').addEventListener('click', resetPoints);
+    });
+</script>
+</body>
+</html>
